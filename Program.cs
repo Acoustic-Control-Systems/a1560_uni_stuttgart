@@ -153,8 +153,8 @@ namespace A1560ApiApp
                     Console.WriteLine("Art der Messauslösung = FALSCH");
                     break;
             }
-
-            //A1560.DataReceived += A1560OnDataReceived;
+            // ! Hier abonnieren Sie das Ereignis, das auftritt, wenn Daten empfangen werden
+            A1560.DataReceived += A1560OnDataReceived;
             //Launch 
             A1560.Start();
             Console.WriteLine("");
@@ -164,8 +164,9 @@ namespace A1560ApiApp
             {
                 Console.WriteLine("Es wird auf ein TTL Signal gewartet");
             }
+            // ! Man muss das Abonnement vor dem Starten des Geräts durchführen, sonst wird das Ereignis nicht ausgelöst und die Daten nicht empfangen
             // Hier können Sie das Ereignis abonnieren
-            A1560.DataReceived += A1560OnDataReceived;
+            // A1560.DataReceived += A1560OnDataReceived;
 
 
 
@@ -174,7 +175,18 @@ namespace A1560ApiApp
             //string filePath = Path.Combine(directoryPath, fileName);
 
             // Beispiel für den Aufruf von A1560OnDataReceived
-           
+
+
+            // ! Warten auf eine Taste, um das Programm zu beenden
+            Console.WriteLine("Drücken Sie eine Taste, um das Programm zu beenden");
+            Console.ReadKey();
+
+            // ! Wenn Sie das Gerät nicht mehr verwenden oder Daten nicht mehr bekommen möchten, müssen Sie das Abonnement des Ereignisses kündigen
+            A1560.DataReceived -= A1560OnDataReceived;
+            // ! Am Ende des Programms muss das Gerät gestoppt werden
+            A1560.Stop();
+            // ! Wenn Sie das Gerät nicht mehr verwenden, müssen Sie die Verbindung trennen
+            A1560.Disconnect();
         }
 
         private static int lastStep = 1; // Variable, um den Lastschritt zu verfolgen
@@ -245,13 +257,16 @@ namespace A1560ApiApp
                 }
                 writer.WriteLine($"ADC Frequenz: {SamplingFrequencyMHz} MHz");
                 writer.WriteLine($"Vektorlänge: {VectorLength}");
-                writer.WriteLine("Daten:Laufzeit [Mikrosekunde] & Amplitude [Db]");
+                writer.WriteLine("Daten:Laufzeit [Mikrosekunde] & Amplitude [%]");
                 writer.WriteLine("");
                 double currentTime = 0.0;
 
                 foreach (var value in vector)
                 {
-                    writer.WriteLine($"{currentTime:F3} \t {value:F3}"); // Zeit und Amplitude schreiben //F3 für 3 Nachkommastellen
+                    // ! Um die Werte als % von Maximum zu speichern, müssen Sie die folgende Zeile verwenden. Die Werte vom Gerät sind in 12 Bit, daher ist der maximale Wert 2048
+                    double valuePercent = value * 100.0 / 2048f; // Umrechnung in Prozent
+                    writer.WriteLine($"{currentTime:F3} \t {valuePercent:F3}"); // Zeit und Amplitude schreiben //F3 für 3 Nachkommastellen
+                    //writer.WriteLine($"{currentTime:F3} \t {value:F3}"); // Zeit und Amplitude schreiben //F3 für 3 Nachkommastellen
                     currentTime += measurementTimeIncrement;
                 }
             }
@@ -269,8 +284,10 @@ namespace A1560ApiApp
 
         private static double CalculateMeasurementTime(int vectorLength, double samplingFrequencyMHz)
         {
-            double totalMeasurementTime = vectorLength / samplingFrequencyMHz;
-            double increment = totalMeasurementTime / vectorLength;
+            //double totalMeasurementTime = vectorLength / samplingFrequencyMHz;
+            //double increment = totalMeasurementTime / vectorLength;
+            // ! Die obigen Zeilen können durch die folgende Zeile ersetzt werden
+            double increment = 1 / samplingFrequencyMHz;
             return increment;
         }
     }
